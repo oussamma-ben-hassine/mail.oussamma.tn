@@ -3,6 +3,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+RUN apk add --no-cache openssl libc6-compat
 RUN npm install -g pnpm@9
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig.json .npmrc* ./
@@ -19,7 +20,7 @@ RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @mail/contracts run build
 RUN pnpm --filter @mail/mail-core run build
 RUN pnpm --filter @mail/integrations run build
-RUN cd apps/api && npx prisma generate --schema=../../prisma/schema.prisma
+RUN npx prisma generate --schema=./prisma/schema.prisma
 RUN pnpm --filter @mail/api run build
 
 # Stage 2: Runner
@@ -27,6 +28,7 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+RUN apk add --no-cache openssl libc6-compat
 RUN npm install -g pnpm@9
 
 ENV NODE_ENV=production
@@ -45,7 +47,7 @@ COPY --from=builder /app/packages/integrations/dist ./packages/integrations/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
 RUN pnpm install --prod --no-frozen-lockfile
-RUN cd apps/api && npx prisma generate --schema=../../prisma/schema.prisma
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 EXPOSE 4000
 
