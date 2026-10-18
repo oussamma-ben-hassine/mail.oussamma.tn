@@ -20,7 +20,7 @@ RUN pnpm install --no-frozen-lockfile
 RUN pnpm --filter @mail/contracts run build
 RUN pnpm --filter @mail/mail-core run build
 RUN pnpm --filter @mail/integrations run build
-RUN npx prisma generate --schema=./prisma/schema.prisma
+RUN pnpm exec prisma generate --schema=./prisma/schema.prisma
 RUN pnpm --filter @mail/api run build
 
 # Stage 2: Runner
@@ -47,7 +47,7 @@ COPY --from=builder /app/packages/integrations/dist ./packages/integrations/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
 RUN pnpm install --prod --no-frozen-lockfile
-RUN npx prisma generate --schema=./prisma/schema.prisma
+RUN pnpm exec prisma generate --schema=./prisma/schema.prisma
 
 EXPOSE 4000
 
