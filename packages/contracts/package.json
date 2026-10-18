@@ -1,0 +1,19 @@
+{
+  "name": "@mail/contracts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Contrats d'API, types TypeScript et schémas de validation Zod partagés",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

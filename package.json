@@ -1,0 +1,37 @@
+{
+  "name": "mail-oussamma-tn",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plateforme complète de messagerie électronique et service centralisé de mailing transactionnel pour l'écosystème oussamma.tn",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter ./packages/* run build && pnpm --filter ./apps/* run build",
+    "build:packages": "pnpm --filter ./packages/* run build",
+    "build:api": "pnpm --filter @mail/contracts run build && pnpm --filter @mail/mail-core run build && pnpm --filter @mail/integrations run build && pnpm --filter @mail/api run build",
+    "build:web": "pnpm --filter @mail/contracts run build && pnpm --filter @mail/ui run build && pnpm --filter @mail/web run build",
+    "build:worker": "pnpm --filter @mail/contracts run build && pnpm --filter @mail/mail-core run build && pnpm --filter @mail/integrations run build && pnpm --filter @mail/worker run build",
+    "dev:api": "pnpm --filter @mail/api run start:dev",
+    "dev:web": "pnpm --filter @mail/web run dev",
+    "dev:worker": "pnpm --filter @mail/worker run start:dev",
+    "test": "pnpm --filter @mail/mail-core run test && pnpm --filter @mail/integrations run test && pnpm --filter @mail/api run test",
+    "test:unit": "pnpm run test -- --testPathPattern=tests/unit",
+    "test:integration": "pnpm run test -- --testPathPattern=tests/integration",
+    "test:security": "pnpm run test -- --testPathPattern=tests/security",
+    "lint": "pnpm --filter ./apps/* run lint && pnpm --filter ./packages/* run lint",
+    "db:generate": "pnpm --filter @mail/api run prisma:generate",
+    "db:migrate": "pnpm --filter @mail/api run prisma:migrate",
+    "db:seed": "pnpm --filter @mail/api run prisma:seed"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,367 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  superadmin
+  mail_admin
+  mail_user
+  mail_auditor
+  application_service
+}
+
+enum EmailPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum EmailDeliveryStatus {
+  PENDING
+  QUEUED
+  PROCESSING
+  SENT
+  DELIVERED
+  BOUNCED
+  FAILED
+}
+
+enum DeliveryAttemptStatus {
+  SUCCESS
+  TEMPORARY_FAILURE
+  PERMANENT_FAILURE
+}
+
+enum SuppressionReason {
+  BOUNCE
+  COMPLAINT
+  UNSUBSCRIBE
+  MANUAL
+}
+
+enum MailboxMemberRole {
+  owner
+  delegate
+  readonly
+}
+
+// 1. Identités synchronisées depuis le SSO OIDC (sub immuable)
+model UserIdentity {
+  id             String    @id @default(uuid())
+  sub            String    @unique // UUID SSO
+  email          String    @unique
+  name           String
+  preferredName  String?
+  role           UserRole  @default(mail_user)
+  avatarUrl      String?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  mailboxes      MailboxMember[]
+  applications   MailApplication[]
+  templates      EmailTemplate[]
+  aiActions      MailAiAction[]
+  auditLogs      MailAuditLog[]
+
+  @@index([email])
+}
+
+// 2. Domaines gérés par la plateforme Mail
+model MailDomain {
+  id                        String    @id @default(uuid())
+  name                      String    @unique // ex: oussamma.tn
+  isVerified                Boolean   @default(false)
+  spfVerified               Boolean   @default(false)
+  dkimVerified              Boolean   @default(false)
+  dmarcVerified             Boolean   @default(false)
+  dkimSelector              String    @default("mail")
+  dkimPrivateKeyEncrypted   String?
+  dkimPublicKey             String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  mailboxes                 Mailbox[]
+
+  @@index([name])
+}
+
+// 3. Boîtes aux lettres associées aux utilisateurs
+model Mailbox {
+  id              String         @id @default(uuid())
+  domainId        String
+  email           String         @unique // ex: contact@oussamma.tn
+  displayName     String
+  quotaBytes      BigInt         @default(2147483648) // 2 Go par défaut
+  usedBytes       BigInt         @default(0)
+  appPasswordHash String?        // Hash Argon2id du mot de passe applicatif client lourd (optionnel)
+  storagePath     String?        // Chemin sur le volume Mailu
+  isSuspended     Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  domain          MailDomain     @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  members         MailboxMember[]
+  aliases         MailAlias[]
+
+  @@index([domainId])
+}
+
+// 4. Membres et permissions d'une boîte aux lettres
+model MailboxMember {
+  id          String             @id @default(uuid())
+  mailboxId   String
+  userId      String
+  role        MailboxMemberRole  @default(owner)
+  createdAt   DateTime           @default(now())
+
+  mailbox     Mailbox            @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+  user        UserIdentity       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mailboxId, userId])
+  @@index([userId])
+}
+
+// 5. Alias de messagerie
+model MailAlias {
+  id                   String    @id @default(uuid())
+  mailboxId            String
+  aliasEmail           String    @unique
+  isActive             Boolean   @default(true)
+  createdAt            DateTime  @default(now())
+
+  destinationMailbox   Mailbox   @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  @@index([mailboxId])
+}
+
+// 6. Applications M2M autorisées à envoyer des emails
+model MailApplication {
+  id                   String               @id @default(uuid())
+  ownerId              String
+  name                 String
+  description          String?
+  allowedSenderDomains String[]             // ex: ["oussamma.tn"]
+  defaultFromEmail     String
+  defaultFromName      String?
+  dailyQuota           Int                  @default(1000)
+  rateLimitPerMinute   Int                  @default(60)
+  scopes               String[]             @default(["mail:send", "mail:read_status"])
+  isActive             Boolean              @default(true)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  owner                UserIdentity         @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  credentials          ApiCredential[]
+  templates            EmailTemplate[]
+  jobs                 MailJob[]
+  webhooks             MailWebhookEndpoint[]
+
+  @@index([ownerId])
+}
+
+// 7. Clés API des applications machine-to-machine
+model ApiCredential {
+  id             String          @id @default(uuid())
+  applicationId  String
+  label          String
+  keyPrefix      String          // 11 premiers caractères (ex: mk_live_1a2b)
+  keyHash        String          @unique // Hachage SHA-256
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  isRevoked      Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+
+  application    MailApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([keyPrefix])
+}
+
+// 8. Modèles d'emails versionnés
+model EmailTemplate {
+  id              String                 @id @default(uuid())
+  name            String                 @unique // ex: "welcome_user"
+  description     String?
+  applicationId   String?
+  ownerId         String
+  currentVersion  Int                    @default(1)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  application     MailApplication?       @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  owner           UserIdentity           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  versions        EmailTemplateVersion[]
+
+  @@index([name])
+}
+
+// 9. Versions d'un modèle d'email
+model EmailTemplateVersion {
+  id               String         @id @default(uuid())
+  templateId       String
+  version          Int
+  subject          String
+  htmlContent      String
+  textContent      String?
+  variablesSchema  Json?
+  sampleData       Json?
+  changeLog        String?
+  createdAt        DateTime       @default(now())
+
+  template         EmailTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, version])
+  @@index([templateId])
+}
+
+// 10. Travail d'envoi d'email transactionnel / applicatif
+model MailJob {
+  id               String               @id @default(uuid())
+  applicationId    String?
+  from             String
+  fromName         String?
+  to               String[]
+  cc               String[]             @default([])
+  bcc              String[]             @default([])
+  replyTo          String?
+  subject          String
+  text             String?
+  html             String?
+  priority         EmailPriority        @default(normal)
+  status           EmailDeliveryStatus  @default(PENDING)
+  attemptsCount    Int                  @default(0)
+  maxAttempts      Int                  @default(5)
+  idempotencyKey   String?              @unique
+  scheduledAt      DateTime?
+  queuedAt         DateTime?
+  sentAt           DateTime?
+  failedAt         DateTime?
+  errorMessage     String?
+  metadata         Json?
+  headers          Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  application      MailApplication?     @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  attempts         MailDeliveryAttempt[]
+  events           MailDeliveryEvent[]
+
+  @@index([applicationId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([idempotencyKey])
+}
+
+// 11. Tentatives d'envoi
+model MailDeliveryAttempt {
+  id             String                 @id @default(uuid())
+  jobId          String
+  attemptNumber  Int
+  provider       String                 // "smtp" ou "external-api"
+  status         DeliveryAttemptStatus
+  responseCode   String?
+  responseBody   String?
+  errorMessage   String?
+  startedAt      DateTime               @default(now())
+  completedAt    DateTime?
+
+  job            MailJob                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+// 12. Événements de livraison
+model MailDeliveryEvent {
+  id             String                 @id @default(uuid())
+  jobId          String
+  eventType      String                 // "delivered", "bounced", "opened", "clicked"
+  recipient      String
+  metadata       Json?
+  occurredAt     DateTime               @default(now())
+
+  job            MailJob                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([recipient])
+}
+
+// 13. Webhooks sortants pour notifier les applications clientes
+model MailWebhookEndpoint {
+  id             String          @id @default(uuid())
+  applicationId  String
+  targetUrl      String
+  secret         String          // Clé secrète de signature HMAC SHA-256
+  events         String[]        @default(["email.sent", "email.delivered", "email.bounced", "email.failed"])
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+
+  application    MailApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+}
+
+// 14. Listes de suppression (désabonnements, rebonds durs, plaintes)
+model MailSuppression {
+  id          String            @id @default(uuid())
+  email       String            @unique
+  reason      SuppressionReason @default(BOUNCE)
+  details     String?
+  createdAt   DateTime          @default(now())
+
+  @@index([email])
+}
+
+// 15. Audit des actions IA (LiteLLM)
+model MailAiAction {
+  id                   String        @id @default(uuid())
+  userId               String
+  actionType           String        // "SUMMARIZE_EMAIL", "GENERATE_REPLY", etc.
+  modelUsed            String
+  tokensUsed           Int?
+  inputSnippet         String?
+  resultSnippet        String?
+  requiresConfirmation Boolean       @default(false)
+  isConfirmed          Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+
+  user                 UserIdentity  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// 16. Journal d'audit de sécurité administratif
+model MailAuditLog {
+  id           String        @id @default(uuid())
+  actorId      String?
+  actorRole    String
+  action       String        // ex: "mailbox.created", "api_key.revoked"
+  resourceType String
+  resourceId   String
+  ipAddress    String?
+  userAgent    String?
+  details      Json?
+  occurredAt   DateTime      @default(now())
+
+  actor        UserIdentity? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([occurredAt])
+}
+
+// 17. Configuration chiffrée des intégrations externes
+model IntegrationConfiguration {
+  id             String    @id @default(uuid())
+  key            String    @unique
+  valueEncrypted String
+  description    String?
+  isEnabled      Boolean   @default(true)
+  updatedAt      DateTime  @updatedAt
+}

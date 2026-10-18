@@ -1,0 +1,26 @@
+{
+  "name": "@mail/worker",
+  "version": "1.0.0",
+  "description": "Worker de traitement asynchrone BullMQ (Envois, tentatives, webhooks, supervision)",
+  "private": true,
+  "main": "./dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "start:dev": "tsc -w",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@mail/contracts": "workspace:*",
+    "@mail/mail-core": "workspace:*",
+    "@mail/integrations": "workspace:*",
+    "@prisma/client": "^5.17.0",
+    "bullmq": "^5.8.4",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prisma": "^5.17.0",
+    "typescript": "^5.5.0"
+  }
+}

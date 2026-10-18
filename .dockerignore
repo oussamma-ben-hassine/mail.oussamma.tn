@@ -1,0 +1,16 @@
+node_modules
+.pnpm-store
+.git
+.github
+dist
+build
+.next
+out
+coverage
+*.log
+.env
+.env.local
+.env.production
+docs
+infra/mailu/data
+infra/mailu/mail

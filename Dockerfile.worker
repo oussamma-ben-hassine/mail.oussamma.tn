@@ -1,0 +1,47 @@
+# Stage 1: Build
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN npm install -g pnpm
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig.json ./
+COPY packages/contracts ./packages/contracts
+COPY packages/mail-core ./packages/mail-core
+COPY packages/integrations ./packages/integrations
+COPY apps/worker ./apps/worker
+COPY prisma ./prisma
+
+RUN pnpm install --frozen-lockfile=false
+
+RUN pnpm --filter @mail/contracts run build
+RUN pnpm --filter @mail/mail-core run build
+RUN pnpm --filter @mail/integrations run build
+RUN cd apps/worker && npx prisma generate --schema=../../prisma/schema.prisma
+RUN pnpm --filter @mail/worker run build
+
+# Stage 2: Runner
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN npm install -g pnpm
+
+ENV NODE_ENV=production
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig.json ./
+COPY packages/contracts ./packages/contracts
+COPY packages/mail-core ./packages/mail-core
+COPY packages/integrations ./packages/integrations
+COPY apps/worker/package.json ./apps/worker/package.json
+COPY prisma ./prisma
+
+COPY --from=builder /app/packages/contracts/dist ./packages/contracts/dist
+COPY --from=builder /app/packages/mail-core/dist ./packages/mail-core/dist
+COPY --from=builder /app/packages/integrations/dist ./packages/integrations/dist
+COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
+
+RUN pnpm install --prod --frozen-lockfile=false
+RUN cd apps/worker && npx prisma generate --schema=../../prisma/schema.prisma
+
+CMD ["node", "apps/worker/dist/main.js"]

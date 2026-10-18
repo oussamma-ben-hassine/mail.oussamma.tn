@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Reverse proxy frontal TLS et terminaison Web
+  front:
+    image: ghcr.io/mailu/nginx:2.0
+    restart: always
+    env_file: mailu.env
+    ports:
+      - "25:25"       # SMTP standard (MX)
+      - "465:465"     # SMTPS (Implicit TLS)
+      - "587:587"     # SMTP Submission (STARTTLS)
+      - "110:110"     # POP3
+      - "995:995"     # POP3S
+      - "143:143"     # IMAP
+      - "993:993"     # IMAPS
+      - "8080:80"     # Mailu Web Admin (interne ou proxy Traefik)
+    volumes:
+      - "./data/certs:/certs"
+      - "./overrides/nginx:/overrides:ro"
+    networks:
+      - default
+      - coolify
+
+  # Résolveur DNS interne Mailu
+  resolver:
+    image: ghcr.io/mailu/unbound:2.0
+    restart: always
+    env_file: mailu.env
+    networks:
+      - default
+
+  # Serveur d'administration et API Mailu REST
+  admin:
+    image: ghcr.io/mailu/admin:2.0
+    restart: always
+    env_file: mailu.env
+    volumes:
+      - "./data/data:/data"
+      - "./data/dkim:/dkim"
+    depends_on:
+      - resolver
+    networks:
+      - default
+
+  # Serveur IMAP / POP3 (Dovecot)
+  imap:
+    image: ghcr.io/mailu/dovecot:2.0
+    restart: always
+    env_file: mailu.env
+    volumes:
+      - "./data/mail:/mail"
+      - "./overrides/dovecot:/overrides:ro"
+    depends_on:
+      - front
+    networks:
+      - default
+
+  # Serveur SMTP (Postfix)
+  smtp:
+    image: ghcr.io/mailu/postfix:2.0
+    restart: always
+    env_file: mailu.env
+    volumes:
+      - "./data/mailqueue:/queue"
+      - "./overrides/postfix:/overrides:ro"
+    depends_on:
+      - front
+      - resolver
+    networks:
+      - default
+
+  # Filtre Antispam, DKIM et réputation (Rspamd)
+  antispam:
+    image: ghcr.io/mailu/rspamd:2.0
+    restart: always
+    env_file: mailu.env
+    volumes:
+      - "./data/filter:/var/lib/rspamd"
+      - "./data/dkim:/dkim"
+      - "./overrides/rspamd:/overrides:ro"
+    depends_on:
+      - front
+      - resolver
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
+  coolify:
+    external: true

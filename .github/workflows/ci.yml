@@ -1,0 +1,48 @@
+name: CI / Build & Tests — Mail.oussamma.tn
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile=false
+
+      - name: Secrets Leak Detection Check
+        run: |
+          echo "Vérification de l'absence de secrets ou tokens dans le code..."
+          ! grep -rnE '(ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|sk-[a-zA-Z0-9]{32,}|BEGIN RSA PRIVATE KEY)' packages apps infra/mailu --exclude="*.example*" --exclude="*.sample*"
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @mail/api run prisma:generate
+
+      - name: Run Automated Test Suites
+        run: |
+          node --test tests/unit/template-engine.test.ts
+          node --test tests/unit/crypto-security.test.ts
+          node --test tests/unit/email-sanitizer.test.ts
+          node --test tests/integration/smtp-provider.test.ts
+          node --test tests/security/rbac-and-quotas.test.ts
+
+      - name: Build All Monorepo Packages & Apps
+        run: pnpm run build:packages

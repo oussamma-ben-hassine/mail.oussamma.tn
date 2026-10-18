@@ -1,0 +1,22 @@
+{
+  "name": "@mail/integrations",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Adaptateurs certifiés pour les services de l'écosystème oussamma.tn (SSO, LiteLLM, Drive, Superviseur, Notification Hub)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "test": "node --test",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@mail/contracts": "workspace:*",
+    "jose": "^5.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  }
+}
