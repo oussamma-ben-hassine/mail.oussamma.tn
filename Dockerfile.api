@@ -5,7 +5,7 @@ WORKDIR /app
 
 RUN npm install -g pnpm
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig.json .npmrc* ./
 COPY packages/contracts ./packages/contracts
 COPY packages/mail-core ./packages/mail-core
 COPY packages/integrations ./packages/integrations
@@ -32,7 +32,7 @@ RUN npm install -g pnpm
 ENV NODE_ENV=production
 ENV PORT=4000
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig.json .npmrc* ./
 COPY packages/contracts ./packages/contracts
 COPY packages/mail-core ./packages/mail-core
 COPY packages/integrations ./packages/integrations
