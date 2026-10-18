@@ -10,7 +10,9 @@ COPY packages/contracts ./packages/contracts
 COPY packages/ui ./packages/ui
 COPY apps/web ./apps/web
 
-RUN pnpm install --frozen-lockfile=false
+ENV NODE_ENV=development
+
+RUN pnpm install --frozen-lockfile=false --dangerously-allow-same-user-build-scripts
 
 RUN pnpm --filter @mail/contracts run build
 RUN pnpm --filter @mail/ui run build

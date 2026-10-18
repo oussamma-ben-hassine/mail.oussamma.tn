@@ -12,7 +12,9 @@ COPY packages/integrations ./packages/integrations
 COPY apps/api ./apps/api
 COPY prisma ./prisma
 
-RUN pnpm install --frozen-lockfile=false
+ENV NODE_ENV=development
+
+RUN pnpm install --frozen-lockfile=false --dangerously-allow-same-user-build-scripts
 
 RUN pnpm --filter @mail/contracts run build
 RUN pnpm --filter @mail/mail-core run build
@@ -42,7 +44,7 @@ COPY --from=builder /app/packages/mail-core/dist ./packages/mail-core/dist
 COPY --from=builder /app/packages/integrations/dist ./packages/integrations/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
-RUN pnpm install --prod --frozen-lockfile=false
+RUN pnpm install --prod --frozen-lockfile=false --dangerously-allow-same-user-build-scripts
 RUN cd apps/api && npx prisma generate --schema=../../prisma/schema.prisma
 
 EXPOSE 4000
