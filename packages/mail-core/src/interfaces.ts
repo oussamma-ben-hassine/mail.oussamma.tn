@@ -1,5 +1,4 @@
-import type { Attachment } from '../../contracts/src/email.ts';
-import type { EmailPriority } from '../../contracts/src/enums.ts';
+import type { Attachment, EmailPriority } from '@mail/contracts';
 
 export interface SendEmailOptions {
   messageId?: string;

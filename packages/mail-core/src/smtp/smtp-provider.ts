@@ -1,4 +1,4 @@
-import type { MailDeliveryProvider, SendEmailOptions, SendEmailResult } from '../interfaces.ts';
+import type { MailDeliveryProvider, SendEmailOptions, SendEmailResult } from '../interfaces.js';
 
 export interface SmtpConfig {
   host: string;
@@ -67,7 +67,7 @@ export class SmtpMailProvider implements MailDeliveryProvider {
     }
 
     try {
-      const mailOptions: nodemailer.SendMailOptions = {
+      const mailOptions: any = {
         messageId,
         from: options.fromName ? `"${options.fromName}" <${options.from}>` : options.from,
         to: options.to,
@@ -86,7 +86,7 @@ export class SmtpMailProvider implements MailDeliveryProvider {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      const rejected = (info.rejected || []).map(r => typeof r === 'string' ? r : r.address);
+      const rejected = (info.rejected || []).map((r: any) => typeof r === 'string' ? r : r.address);
 
       return {
         success: rejected.length === 0,

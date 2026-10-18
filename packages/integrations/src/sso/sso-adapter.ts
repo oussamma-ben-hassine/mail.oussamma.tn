@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { UserRole } from '../../../contracts/src/enums.ts';
+import { UserRole } from '@mail/contracts';
 
 export interface SsoConfig {
   issuer: string;
