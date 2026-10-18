@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Plateforme complète de messagerie électronique et service centralisé de mailing transactionnel pour l'écosystème oussamma.tn",
+  "packageManager": "pnpm@9.15.4",
   "workspaces": [
     "apps/*",
     "packages/*"
