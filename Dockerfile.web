@@ -16,6 +16,8 @@ RUN pnpm install --no-frozen-lockfile
 
 RUN pnpm --filter @mail/contracts run build
 RUN pnpm --filter @mail/ui run build
+
+ENV NODE_ENV=production
 RUN pnpm --filter @mail/web run build
 
 # Stage 2: Runner
