@@ -27,6 +27,9 @@
     "db:migrate": "pnpm --filter @mail/api run prisma:migrate",
     "db:seed": "pnpm --filter @mail/api run prisma:seed"
   },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "prettier": "^3.3.0",
