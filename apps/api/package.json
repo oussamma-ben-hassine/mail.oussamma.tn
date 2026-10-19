@@ -1,6 +1,7 @@
 {
   "name": "@mail/api",
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "API REST versionnée pour la messagerie et le mailing transactionnel oussamma.tn",
   "private": true,
   "scripts": {
