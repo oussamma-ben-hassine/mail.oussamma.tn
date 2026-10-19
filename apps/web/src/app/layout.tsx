@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import '../styles/globals.css';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Mail — oussamma.tn',
   description: 'Messagerie électronique et service de mailing transactionnel unifié pour l’écosystème oussamma.tn',
