@@ -1,5 +1,5 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { PrismaService } from '../../../prisma/prisma.service.js';
 import { CryptoSecurity } from '@mail/mail-core';
 import { UserRole } from '@mail/contracts';
 

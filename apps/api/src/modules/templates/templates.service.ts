@@ -25,7 +25,7 @@ export class TemplatesService {
     });
 
     return templates.map(t => {
-      const v = t.versions[0] || {};
+      const v = (t.versions[0] || {}) as any;
       return {
         id: t.id,
         name: t.name,
@@ -54,7 +54,7 @@ export class TemplatesService {
     });
 
     if (!t) throw new NotFoundException(`Template introuvable : ${id}`);
-    const v = t.versions[0] || {};
+    const v = (t.versions[0] || {}) as any;
 
     return {
       id: t.id,

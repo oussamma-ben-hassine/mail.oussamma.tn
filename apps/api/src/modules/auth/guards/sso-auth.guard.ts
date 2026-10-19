@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { SsoAdapter } from '@mail/integrations';
-import { PrismaService } from '../../prisma/prisma.service.js';
+import { PrismaService } from '../../../prisma/prisma.service.js';
 import { UserRole } from '@mail/contracts';
 
 @Injectable()
